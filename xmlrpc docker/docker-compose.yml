@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  datagen:
+    build: .
+    command: python datagen_xmlrpc.py
+    networks:
+      - pipeline-net
+
+  preprocess:
+    build: .
+    command: python preprocess_xmlrpc.py
+    networks:
+      - pipeline-net
+
+  feature:
+    build: .
+    command: python feature_xmlrpc.py
+    networks:
+      - pipeline-net
+
+  analysis:
+    build: .
+    command: python analysis_xmlrpc.py
+    networks:
+      - pipeline-net
+
+  master:
+    build: .
+    command: python master_xmlrpc.py
+    ports:
+      - "8005:8005" # Expose the master port to the host machine
+    depends_on:
+      - datagen
+      - preprocess
+      - feature
+      - analysis
+    networks:
+      - pipeline-net
+
+networks:
+  pipeline-net:
+    driver: bridge

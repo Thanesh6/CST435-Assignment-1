@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  master:
+    build: .
+    command: python master.py
+    ports:
+      - "5000:5000" # Expose the master's port to your local machine
+    networks:
+      - rest-api-net
+    depends_on:
+      - worker1
+      - worker2
+      - worker3
+      - worker4
+
+  worker1:
+    build: .
+    command: python worker1.py
+    networks:
+      - rest-api-net
+
+  worker2:
+    build: .
+    command: python worker2.py
+    networks:
+      - rest-api-net
+
+  worker3:
+    build: .
+    command: python worker3.py
+    networks:
+      - rest-api-net
+
+  worker4:
+    build: .
+    command: python worker4.py
+    networks:
+      - rest-api-net
+
+networks:
+  rest-api-net:
+    driver: bridge
