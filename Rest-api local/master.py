@@ -1,4 +1,4 @@
-# --- START OF FILE master.py (Modified for Local Run with Clear Output) ---
+# --- START OF FILE master_heavy.py ---
 from flask import Flask, request, jsonify
 import requests
 import time
@@ -16,7 +16,7 @@ WORKERS = {
 @app.route('/run_pipeline', methods=['POST'])
 def run_pipeline():
     print("=" * 60)
-    print("🚀 LOCAL REST API MASTER ACTIVITY 🚀")
+    print("🚀 LOCAL REST API MASTER ACTIVITY (HEAVY COMPUTE) 🚀")
     print("=" * 60)
 
     start_time = time.time()
@@ -60,13 +60,12 @@ def run_pipeline():
         print("✅ PIPELINE COMPLETE")
         print("-" * 25)
 
-        # Create the structured final payload to send back to the client
+        # --- MODIFIED SECTION ---
+        # Create the final payload to send back to the client,
+        # now matching the gRPC/XML-RPC structure.
         final_payload = {
             "total_time": f"{total_time:.4f}",
-            "summary": {
-                "final_analysis": final_result.get("analysis", "N/A"),
-                "features": data_from_w3.get("features", {}),
-            }
+            "summary": final_result # The final result from worker 4 has the correct structure
         }
 
         print("Returning final summary to the client.")
@@ -79,6 +78,5 @@ def run_pipeline():
         return jsonify({"error": "Failed to process pipeline", "details": str(e)}), 500
 
 if __name__ == '__main__':
-    # For a local run, we don't need to specify host="0.0.0.0"
     app.run(port=5000)
-# --- END OF FILE master.py (Modified for Local Run with Clear Output) ---
+# --- END OF FILE master_heavy.py ---
