@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package pipeline;
+
+service DataGenService {
+  rpc GenerateData (DataRequest) returns (DataResponse);
+}
+
+service PreprocessService {
+  rpc CleanData (DataResponse) returns (DataResponse);
+}
+
+service FeatureService {
+  rpc ExtractFeatures (DataResponse) returns (FeatureResponse);
+}
+
+service AnalysisService {
+  rpc AnalyzeData (FeatureResponse) returns (AnalysisResponse);
+}
+
+service MasterService {
+  rpc RunPipeline (PipelineRequest) returns (PipelineResponse);
+}
+
+message DataRequest {
+  int32 size = 1;
+}
+
+message DataResponse {
+  repeated double data = 1;
+  int32 rows = 2;
+  int32 cols = 3;
+}
+
+message FeatureResponse {
+  repeated double features = 1;
+}
+
+message AnalysisResponse {
+  double correlation = 1;
+  double avg_distance = 2;
+  string cluster_result = 3;
+}
+
+message PipelineRequest {
+  int32 data_size = 1;
+}
+
+message PipelineResponse {
+  double total_time = 1;
+  string summary = 2;
+}

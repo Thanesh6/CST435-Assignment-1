@@ -1,0 +1,45 @@
+Step 1: Environment Setup & Kubernetes Installation
+Install Docker Desktop: Ensure you have the latest version of Docker Desktop for your OS (Windows or macOS) installed and running.
+Enable Kubernetes:
+Open Docker Desktop Settings.
+Go to the Kubernetes tab.
+Check the box for Enable Kubernetes.
+Click Apply & Restart. Docker will download and set up a local Kubernetes cluster. This can take several minutes.
+Verify Kubernetes is Running:
+Open a new terminal or PowerShell.
+Run the command: kubectl cluster-info
+You should see a success message indicating the "Kubernetes control plane is running".
+
+Step2: go to grpc kubernetes folder
+cd grpc kubernetes
+
+Step 3: Build the Docker Image
+This step packages all your Python code into an image that Kubernetes can run.
+Navigate your terminal to the grpc-kubernetes project folder.
+Run the build command. We use --no-cache to ensure it's a completely fresh build with your latest code, and we tag it with :k8s-final to match the YAML file.
+run docker build --no-cache -t grpc-pipeline:k8s-final .
+
+Step 4: Deploy to Kubernetes
+This step tells Kubernetes to read your configuration and start all the services.
+run kubectl apply -f grpc-pipeline-k8s.yaml
+Monitor the Startup: Watch the pods being created.
+run kubectl get pods -w
+Wait until the STATUS for all 5 pods changes from Pending or ContainerCreating to Running. This might take a minute. Press Ctrl+C to stop watching.
+
+Step 5: Find the Master Service Port
+Once the pods are running, find the external port that Kubernetes assigned to your master service.
+run kubectl get service master
+Look at the PORT(S) column. You will see something like 50055:3XXXX/TCP. Note down the five-digit number (the NodePort).
+
+Step 6: Update and Run the Client
+Edit client.py: Open your client.py file and find this line:
+with grpc.insecure_channel('localhost:50055') as channel:
+Change the port to the NodePort you just found. For example, if the port was 31234:
+with grpc.insecure_channel('localhost:31234') as channel:
+Run the client:
+python client.py
+You should now see the successful, formatted output from the pipeline.
+
+Step 7: Cleanup
+When you are finished, remove all the deployed components from your cluster with a single command:
+kubectl delete -f grpc-pipeline-k8s.yaml

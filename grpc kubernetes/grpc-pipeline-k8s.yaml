@@ -1,0 +1,209 @@
+# --- START OF FILE grpc-pipeline-k8s.yaml ---
+
+# ===================================================================
+# DataGen Service (Worker 1)
+# ===================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datagen-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datagen
+  template:
+    metadata:
+      labels:
+        app: datagen
+    spec:
+      dnsPolicy: ClusterFirst 
+      containers:
+      - name: datagen
+        image: grpc-pipeline:k8s
+        imagePullPolicy: IfNotPresent # Important for using local images
+        command: ["python", "datagen_server.py"]
+        ports:
+        - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datagen # This is the DNS name the master will use to connect
+spec:
+  selector:
+    app: datagen # Links this service to the pods with the 'app: datagen' label
+  ports:
+    - protocol: TCP
+      port: 50051 # The port this service exposes
+      targetPort: 50051 # The port the container is listening on
+  type: ClusterIP # Only accessible from within the cluster
+
+# ===================================================================
+# Preprocess Service (Worker 2)
+# ===================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: preprocess-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: preprocess
+  template:
+    metadata:
+      labels:
+        app: preprocess
+    spec:
+      containers:
+      - name: preprocess
+        image: grpc-pipeline:k8s
+        imagePullPolicy: IfNotPresent
+        command: ["python", "preprocess_server.py"]
+        ports:
+        - containerPort: 50052
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: preprocess
+spec:
+  selector:
+    app: preprocess
+  ports:
+    - protocol: TCP
+      port: 50052
+      targetPort: 50052
+  type: ClusterIP
+
+# ===================================================================
+# Feature Service (Worker 3)
+# ===================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: feature
+  template:
+    metadata:
+      labels:
+        app: feature
+    spec:
+      containers:
+      - name: feature
+        image: grpc-pipeline:k8s
+        imagePullPolicy: IfNotPresent
+        command: ["python", "feature_server.py"]
+        ports:
+        - containerPort: 50053
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feature
+spec:
+  selector:
+    app: feature
+  ports:
+    - protocol: TCP
+      port: 50053
+      targetPort: 50053
+  type: ClusterIP
+
+# ===================================================================
+# Analysis Service (Worker 4)
+# ===================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analysis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analysis
+  template:
+    metadata:
+      labels:
+        app: analysis
+    spec:
+      containers:
+      - name: analysis
+        image: grpc-pipeline:k8s
+        imagePullPolicy: IfNotPresent
+        command: ["python", "analysis_server.py"]
+        ports:
+        - containerPort: 50054
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analysis
+spec:
+  selector:
+    app: analysis
+  ports:
+    - protocol: TCP
+      port: 50054
+      targetPort: 50054
+  type: ClusterIP
+
+# ===================================================================
+# Master Service (Orchestrator)
+# ===================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: master
+  template:
+    metadata:
+      labels:
+        app: master
+    spec:
+      containers:
+      - name: master
+        image: grpc-pipeline:k8s-final
+        imagePullPolicy: IfNotPresent
+        command: ["python", "master_server.py"]
+        ports:
+        - containerPort: 50055
+        env:
+        - name: DATAGEN_SERVICE_HOST
+          value: "datagen"
+        - name: DATAGEN_SERVICE_PORT
+          value: "50051"
+        - name: PREPROCESS_SERVICE_HOST
+          value: "preprocess"
+        - name: PREPROCESS_SERVICE_PORT
+          value: "50052"
+        - name: FEATURE_SERVICE_HOST
+          value: "feature"
+        - name: FEATURE_SERVICE_PORT
+          value: "50053"
+        - name: ANALYSIS_SERVICE_HOST
+          value: "analysis"
+        - name: ANALYSIS_SERVICE_PORT
+          value: "50054"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: master
+spec:
+  selector:
+    app: master
+  ports:
+    - protocol: TCP
+      port: 50055
+      targetPort: 50055
+  type: NodePort
