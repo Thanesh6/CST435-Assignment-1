@@ -1,45 +1,106 @@
+How to Run the gRPC Pipeline on Kubernetes
 Step 1: Environment Setup & Kubernetes Installation
-Install Docker Desktop: Ensure you have the latest version of Docker Desktop for your OS (Windows or macOS) installed and running.
-Enable Kubernetes:
-Open Docker Desktop Settings.
-Go to the Kubernetes tab.
-Check the box for Enable Kubernetes.
-Click Apply & Restart. Docker will download and set up a local Kubernetes cluster. This can take several minutes.
-Verify Kubernetes is Running:
-Open a new terminal or PowerShell.
-Run the command: kubectl cluster-info
-You should see a success message indicating the "Kubernetes control plane is running".
 
-Step2: go to grpc kubernetes folder
-cd grpc kubernetes
+Install Docker Desktop
 
-Step 3: Build the Docker Image
-This step packages all your Python code into an image that Kubernetes can run.
-Navigate your terminal to the grpc-kubernetes project folder.
-Run the build command. We use --no-cache to ensure it's a completely fresh build with your latest code, and we tag it with :k8s-final to match the YAML file.
-run docker build --no-cache -t grpc-pipeline:k8s-final .
+Ensure the latest version is installed on Windows or macOS.
+
+Docker Desktop includes a local Kubernetes cluster.
+
+Enable Kubernetes
+
+Open Docker Desktop → Settings → Kubernetes tab.
+
+Check Enable Kubernetes → Click Apply & Restart.
+
+Wait a few minutes while Kubernetes is set up.
+
+Verify Kubernetes
+
+kubectl cluster-info
+
+
+You should see:
+
+Kubernetes control plane is running at ...
+
+Step 2: Navigate to Project Folder
+cd "grpc kubernetes"
+
+Step 3: Build Docker Images
+docker build --no-cache -t grpc-pipeline:k8s .
+docker build --no-cache -t grpc-pipeline:k8s-final .
+
+
+Docker Desktop Kubernetes automatically uses local images — no need to load them manually.
 
 Step 4: Deploy to Kubernetes
-This step tells Kubernetes to read your configuration and start all the services.
-run kubectl apply -f grpc-pipeline-k8s.yaml
-Monitor the Startup: Watch the pods being created.
-run kubectl get pods -w
-Wait until the STATUS for all 5 pods changes from Pending or ContainerCreating to Running. This might take a minute. Press Ctrl+C to stop watching.
+kubectl apply -f pipeline.yaml
 
-Step 5: Find the Master Service Port
-Once the pods are running, find the external port that Kubernetes assigned to your master service.
-run kubectl get service master
-Look at the PORT(S) column. You will see something like 50055:3XXXX/TCP. Note down the five-digit number (the NodePort).
+Monitor Pods
+kubectl get pods -w
 
-Step 6: Update and Run the Client
-Edit client.py: Open your client.py file and find this line:
-with grpc.insecure_channel('localhost:50055') as channel:
-Change the port to the NodePort you just found. For example, if the port was 31234:
-with grpc.insecure_channel('localhost:31234') as channel:
-Run the client:
+
+Wait until all pods show STATUS as Running.
+
+You should see 5 pods:
+
+datagen-deployment
+preprocess-deployment
+feature-deployment
+analysis-deployment
+master-deployment
+
+
+Press Ctrl+C to stop watching.
+
+Step 5: Verify Services and NodePort
+kubectl get svc
+
+
+You should see all 5 services:
+
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)
+datagen      ClusterIP   10.xxx.xxx.xxx  <none>        50051/TCP
+preprocess   ClusterIP   10.xxx.xxx.xxx  <none>        50052/TCP
+feature      ClusterIP   10.xxx.xxx.xxx  <none>        50053/TCP
+analysis     ClusterIP   10.xxx.xxx.xxx  <none>        50054/TCP
+master       NodePort    10.xxx.xxx.xxx  <none>        50055:3XXXX/TCP
+
+
+External NodePort: the 5-digit number after the colon in PORT(S) (e.g., 3XXXX).
+
+Step 6: Run the Client
+
+The updated client.py automatically connects to the Master service using the NodePort.
+
 python client.py
-You should now see the successful, formatted output from the pipeline.
+
+Expected Output:
+============================================================
+🚀 STARTING Kubernetes gRPC CLIENT 🚀
+============================================================
+Connecting to MASTER service at: 127.0.0.1:3XXXX
+[HH:MM:SS] CLIENT: Initiating pipeline with data_size = 300...
+[HH:MM:SS] CLIENT: Received final response from the master server.
+-------------------------
+✅ PIPELINE COMPLETE
+-------------------------
+📊 Final Summary:
+     - Cluster Result:   Cluster A
+     - Correlation:      1.0000
+     - Average Distance: 129.0260
+
+⏱️ Total Execution Time: 0.1805 seconds
+============================================================
+
+
+Pipeline automatically calls all worker services: datagen → preprocess → feature → analysis.
+
+No manual edits to the client are required.
 
 Step 7: Cleanup
-When you are finished, remove all the deployed components from your cluster with a single command:
-kubectl delete -f grpc-pipeline-k8s.yaml
+kubectl delete -f pipeline.yaml
+
+
+Deletes all pods, deployments, and services created.

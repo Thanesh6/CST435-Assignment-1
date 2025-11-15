@@ -1,8 +1,6 @@
-# --- START OF FILE grpc-pipeline-k8s.yaml ---
-
-# ===================================================================
-# DataGen Service (Worker 1)
-# ===================================================================
+# =======================
+# DATAGEN
+# =======================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,11 +15,10 @@ spec:
       labels:
         app: datagen
     spec:
-      dnsPolicy: ClusterFirst 
       containers:
       - name: datagen
         image: grpc-pipeline:k8s
-        imagePullPolicy: IfNotPresent # Important for using local images
+        imagePullPolicy: IfNotPresent
         command: ["python", "datagen_server.py"]
         ports:
         - containerPort: 50051
@@ -29,19 +26,19 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: datagen # This is the DNS name the master will use to connect
+  name: datagen
 spec:
   selector:
-    app: datagen # Links this service to the pods with the 'app: datagen' label
+    app: datagen
   ports:
-    - protocol: TCP
-      port: 50051 # The port this service exposes
-      targetPort: 50051 # The port the container is listening on
-  type: ClusterIP # Only accessible from within the cluster
+    - port: 50051
+      targetPort: 50051
+  type: ClusterIP
 
-# ===================================================================
-# Preprocess Service (Worker 2)
-# ===================================================================
+# =======================
+# PREPROCESS
+# =======================
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,14 +69,14 @@ spec:
   selector:
     app: preprocess
   ports:
-    - protocol: TCP
-      port: 50052
+    - port: 50052
       targetPort: 50052
   type: ClusterIP
 
-# ===================================================================
-# Feature Service (Worker 3)
-# ===================================================================
+# =======================
+# FEATURE
+# =======================
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -110,14 +107,14 @@ spec:
   selector:
     app: feature
   ports:
-    - protocol: TCP
-      port: 50053
+    - port: 50053
       targetPort: 50053
   type: ClusterIP
 
-# ===================================================================
-# Analysis Service (Worker 4)
-# ===================================================================
+# =======================
+# ANALYSIS
+# =======================
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -148,14 +145,14 @@ spec:
   selector:
     app: analysis
   ports:
-    - protocol: TCP
-      port: 50054
+    - port: 50054
       targetPort: 50054
   type: ClusterIP
 
-# ===================================================================
-# Master Service (Orchestrator)
-# ===================================================================
+# =======================
+# MASTER
+# =======================
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -177,23 +174,6 @@ spec:
         command: ["python", "master_server.py"]
         ports:
         - containerPort: 50055
-        env:
-        - name: DATAGEN_SERVICE_HOST
-          value: "datagen"
-        - name: DATAGEN_SERVICE_PORT
-          value: "50051"
-        - name: PREPROCESS_SERVICE_HOST
-          value: "preprocess"
-        - name: PREPROCESS_SERVICE_PORT
-          value: "50052"
-        - name: FEATURE_SERVICE_HOST
-          value: "feature"
-        - name: FEATURE_SERVICE_PORT
-          value: "50053"
-        - name: ANALYSIS_SERVICE_HOST
-          value: "analysis"
-        - name: ANALYSIS_SERVICE_PORT
-          value: "50054"
 ---
 apiVersion: v1
 kind: Service
@@ -203,7 +183,6 @@ spec:
   selector:
     app: master
   ports:
-    - protocol: TCP
-      port: 50055
+    - port: 50055
       targetPort: 50055
   type: NodePort
